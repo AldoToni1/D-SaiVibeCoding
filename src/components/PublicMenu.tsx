@@ -4,15 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import {
-  Globe,
-  ShoppingCart,
-  X,
-  Plus,
-  Minus,
-  Send,
-  ArrowLeft,
-} from 'lucide-react';
+import { Globe, ShoppingCart, X, Plus, Minus, Send, ArrowLeft } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface CartItem {
@@ -38,9 +30,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
   const categories = ['all', ...Array.from(new Set(menuItems.map((item) => item.category)))];
 
   const filteredItems =
-    selectedCategory === 'all'
-      ? menuItems
-      : menuItems.filter((item) => item.category === selectedCategory);
+    selectedCategory === 'all' ? menuItems : menuItems.filter((item) => item.category === selectedCategory);
 
   const sortedItems = [...filteredItems].sort((a, b) => a.order - b.order);
 
@@ -49,9 +39,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
       const existing = prev.find((cartItem) => cartItem.item.id === item.id);
       if (existing) {
         return prev.map((cartItem) =>
-          cartItem.item.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
+          cartItem.item.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
         );
       }
       return [...prev, { item, quantity: 1 }];
@@ -62,18 +50,13 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
     setCart((prev) => {
       return prev
         .map((cartItem) =>
-          cartItem.item.id === itemId
-            ? { ...cartItem, quantity: cartItem.quantity + delta }
-            : cartItem
+          cartItem.item.id === itemId ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem
         )
         .filter((cartItem) => cartItem.quantity > 0);
     });
   };
 
-  const totalAmount = cart.reduce(
-    (sum, cartItem) => sum + cartItem.item.price * cartItem.quantity,
-    0
-  );
+  const totalAmount = cart.reduce((sum, cartItem) => sum + cartItem.item.price * cartItem.quantity, 0);
 
   const sendWhatsAppOrder = () => {
     const orderText = cart
@@ -92,9 +75,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
       'id-ID'
     )}`;
 
-    const whatsappUrl = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(
-      message
-    )}`;
+    const whatsappUrl = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -150,11 +131,11 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
               </Button>
             )}
             <div className="flex-1 text-center">
-              <h1 className={`text-2xl font-bold ${theme.headerText}`}>
-                {language === 'id'
-                  ? settings.restaurantName
-                  : settings.restaurantNameEn || settings.restaurantName}
-              </h1>
+              <div className="inline-block px-4 py-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                <h1 className={`text-2xl font-bold drop-shadow-lg`}>
+                  {language === 'id' ? settings.restaurantName : settings.restaurantNameEn || settings.restaurantName}
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -194,9 +175,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                 variant={selectedCategory === category ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedCategory(category)}
-                className={
-                  selectedCategory === category ? theme.buttonBg : ''
-                }
+                className={selectedCategory === category ? theme.buttonBg : ''}
               >
                 {category === 'all' ? t('Semua', 'All') : category}
               </Button>
@@ -209,9 +188,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
       <main className="container mx-auto px-4 py-6">
         {sortedItems.length === 0 ? (
           <Card className={`${theme.cardBg} p-12 text-center`}>
-            <p className="text-gray-500">
-              {t('Belum ada menu tersedia', 'No menu items available')}
-            </p>
+            <p className="text-gray-500">{t('Belum ada menu tersedia', 'No menu items available')}</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -222,11 +199,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                 onClick={() => handleItemClick(item.id)}
               >
                 {item.image && (
-                  <ImageWithFallback
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-48 object-cover"
-                  />
+                  <ImageWithFallback src={item.image} alt={item.name} className="w-full h-48 object-cover" />
                 )}
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -236,21 +209,18 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                     <Badge variant="secondary">{item.category}</Badge>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">
-                    {language === 'id'
-                      ? item.description
-                      : item.descriptionEn || item.description}
+                    {language === 'id' ? item.description : item.descriptionEn || item.description}
                   </p>
                   <div className="flex items-center justify-between">
-                    <p className={`font-semibold ${theme.accentText}`}>
-                      Rp {item.price.toLocaleString('id-ID')}
-                    </p>
+                    <p className={`font-semibold ${theme.accentText}`}>Rp {item.price.toLocaleString('id-ID')}</p>
                     <Button
                       size="sm"
                       onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation();
                         addToCart(item);
                       }}
-                      className={theme.buttonBg}>
+                      className={theme.buttonBg}
+                    >
                       <Plus className="size-4 mr-1" />
                       {t('Tambah', 'Add')}
                     </Button>
@@ -267,9 +237,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
           <div className="bg-white w-full max-w-md h-full overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-xl font-semibold">
-                {t('Pesanan Anda', 'Your Order')}
-              </h2>
+              <h2 className="text-xl font-semibold">{t('Pesanan Anda', 'Your Order')}</h2>
               <Button variant="ghost" size="sm" onClick={() => setShowCart(false)}>
                 <X className="size-5" />
               </Button>
@@ -295,27 +263,15 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                         )}
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
-                            {language === 'id'
-                              ? cartItem.item.name
-                              : cartItem.item.nameEn || cartItem.item.name}
+                            {language === 'id' ? cartItem.item.name : cartItem.item.nameEn || cartItem.item.name}
                           </h3>
-                          <p className="text-sm text-orange-600">
-                            Rp {cartItem.item.price.toLocaleString('id-ID')}
-                          </p>
+                          <p className="text-sm text-orange-600">Rp {cartItem.item.price.toLocaleString('id-ID')}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateQuantity(cartItem.item.id, -1)}
-                            >
+                            <Button size="sm" variant="outline" onClick={() => updateQuantity(cartItem.item.id, -1)}>
                               <Minus className="size-3" />
                             </Button>
                             <span className="font-medium">{cartItem.quantity}</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateQuantity(cartItem.item.id, 1)}
-                            >
+                            <Button size="sm" variant="outline" onClick={() => updateQuantity(cartItem.item.id, 1)}>
                               <Plus className="size-3" />
                             </Button>
                           </div>
@@ -331,10 +287,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                         Rp {totalAmount.toLocaleString('id-ID')}
                       </span>
                     </div>
-                    <Button
-                      className="w-full gap-2 bg-green-600 hover:bg-green-700"
-                      onClick={sendWhatsAppOrder}
-                    >
+                    <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={sendWhatsAppOrder}>
                       <Send className="size-4" />
                       {t('Pesan via WhatsApp', 'Order via WhatsApp')}
                     </Button>

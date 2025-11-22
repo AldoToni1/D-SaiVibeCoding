@@ -68,33 +68,23 @@ export function TemplateSelection() {
               id="whatsappNumber"
               value={settings.whatsappNumber}
               onChange={(e) => updateSettings({ whatsappNumber: e.target.value })}
-              placeholder="628123456789"
+              placeholder="6281227281923"
             />
-            <p className="text-xs text-gray-500">
-              Format: 628xxxxxxxxx (62 untuk Indonesia, tanpa tanda +)
-            </p>
+            <p className="text-xs text-gray-500">Format: 628xxxxxxxxx (62 untuk Indonesia, tanpa tanda +)</p>
           </div>
         </div>
       </Card>
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Pilih Template</h2>
-        <p className="text-sm text-gray-600 mb-6">
-          Pilih tema tampilan untuk menu digital Anda
-        </p>
-        
+        <p className="text-sm text-gray-600 mb-6">Pilih tema tampilan untuk menu digital Anda</p>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {templates.map((template) => (
-            <button
-              key={template.id}
-              onClick={() => updateSettings({ template: template.id })}
-              className="text-left"
-            >
+            <button key={template.id} onClick={() => updateSettings({ template: template.id })} className="text-left">
               <Card
                 className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
-                  settings.template === template.id
-                    ? 'ring-2 ring-orange-500 ring-offset-2'
-                    : ''
+                  settings.template === template.id ? 'ring-2 ring-orange-500 ring-offset-2' : ''
                 }`}
               >
                 <div className="flex items-start gap-4">

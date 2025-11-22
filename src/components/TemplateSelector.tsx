@@ -18,8 +18,8 @@ const themes = [
     colors: {
       primary: 'bg-gray-900',
       secondary: 'bg-gray-100',
-      accent: 'bg-gray-600'
-    }
+      accent: 'bg-gray-600',
+    },
   },
   {
     id: 'colorful' as const,
@@ -29,8 +29,8 @@ const themes = [
     colors: {
       primary: 'bg-orange-500',
       secondary: 'bg-yellow-400',
-      accent: 'bg-pink-500'
-    }
+      accent: 'bg-pink-500',
+    },
   },
   {
     id: 'elegant' as const,
@@ -40,8 +40,8 @@ const themes = [
     colors: {
       primary: 'bg-amber-900',
       secondary: 'bg-amber-100',
-      accent: 'bg-amber-600'
-    }
+      accent: 'bg-amber-600',
+    },
   },
   {
     id: 'modern' as const,
@@ -51,9 +51,9 @@ const themes = [
     colors: {
       primary: 'bg-blue-600',
       secondary: 'bg-cyan-100',
-      accent: 'bg-purple-500'
-    }
-  }
+      accent: 'bg-purple-500',
+    },
+  },
 ];
 
 export default function TemplateSelector({ settings, setSettings }: TemplateSelectorProps) {
@@ -91,7 +91,7 @@ export default function TemplateSelector({ settings, setSettings }: TemplateSele
               id="whatsapp"
               value={settings.whatsappNumber}
               onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
-              placeholder="628123456789"
+              placeholder="6281227281923"
             />
             <p className="text-gray-500">Format: 628xxxxxxxxx (gunakan 62 untuk +62)</p>
           </div>
@@ -107,7 +107,7 @@ export default function TemplateSelector({ settings, setSettings }: TemplateSele
             {themes.map((theme) => {
               const Icon = theme.icon;
               const isSelected = settings.theme === theme.id;
-              
+
               return (
                 <button
                   key={theme.id}
@@ -118,11 +118,7 @@ export default function TemplateSelector({ settings, setSettings }: TemplateSele
                 >
                   <div className="flex items-start justify-between mb-4">
                     <Icon className={`size-8 ${isSelected ? 'text-orange-500' : 'text-gray-400'}`} />
-                    {isSelected && (
-                      <div className="bg-orange-500 text-white px-3 py-1 rounded-full">
-                        Aktif
-                      </div>
-                    )}
+                    {isSelected && <div className="bg-orange-500 text-white px-3 py-1 rounded-full">Aktif</div>}
                   </div>
                   <h3 className="mb-1">{theme.name}</h3>
                   <p className="text-gray-500 mb-4">{theme.description}</p>

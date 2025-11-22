@@ -5,19 +5,28 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Plus, Pencil, Trash2, GripVertical, Loader } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from './ui/dialog';
-import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { MenuItem } from '../contexts/MenuContext';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { toast } from 'sonner';
 
 interface MenuItemFormData {
   name: string;
@@ -30,14 +39,7 @@ interface MenuItemFormData {
 }
 
 function SortableMenuItem({ item, onEdit, onDelete }: { item: MenuItem; onEdit: () => void; onDelete: () => void }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -48,30 +50,20 @@ function SortableMenuItem({ item, onEdit, onDelete }: { item: MenuItem; onEdit: 
   return (
     <Card ref={setNodeRef} style={style} className="p-4">
       <div className="flex items-start gap-4">
-        <button
-          className="mt-2 cursor-grab active:cursor-grabbing touch-none"
-          {...attributes}
-          {...listeners}
-        >
+        <button className="mt-2 cursor-grab active:cursor-grabbing touch-none" {...attributes} {...listeners}>
           <GripVertical className="size-5 text-gray-400" />
         </button>
-        
+
         {item.image && (
-          <ImageWithFallback
-            src={item.image}
-            alt={item.name}
-            className="w-20 h-20 object-cover rounded-lg"
-          />
+          <ImageWithFallback src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-lg" />
         )}
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900">{item.name}</h3>
               {item.nameEn && <p className="text-sm text-gray-500">{item.nameEn}</p>}
-              <p className="text-orange-600 font-semibold mt-1">
-                Rp {item.price.toLocaleString('id-ID')}
-              </p>
+              <p className="text-orange-600 font-semibold mt-1">Rp {item.price.toLocaleString('id-ID')}</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={onEdit}>
@@ -83,9 +75,7 @@ function SortableMenuItem({ item, onEdit, onDelete }: { item: MenuItem; onEdit: 
             </div>
           </div>
           <p className="text-sm text-gray-600 mt-2">{item.description}</p>
-          {item.descriptionEn && (
-            <p className="text-sm text-gray-500 mt-1 italic">{item.descriptionEn}</p>
-          )}
+          {item.descriptionEn && <p className="text-sm text-gray-500 mt-1 italic">{item.descriptionEn}</p>}
           <span className="inline-block mt-2 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
             {item.category}
           </span>
@@ -96,9 +86,10 @@ function SortableMenuItem({ item, onEdit, onDelete }: { item: MenuItem; onEdit: 
 }
 
 export function MenuBuilder() {
-  const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems } = useMenu();
+  const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems, isLoading, error } = useMenu();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<MenuItemFormData>({
     name: '',
     nameEn: '',
@@ -120,7 +111,7 @@ export function MenuBuilder() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const itemData = {
       name: formData.name,
       nameEn: formData.nameEn || undefined,
@@ -131,14 +122,23 @@ export function MenuBuilder() {
       image: formData.image || undefined,
     };
 
-    if (editingItem) {
-      updateMenuItem(editingItem.id, itemData);
-    } else {
-      addMenuItem(itemData);
-    }
+    setIsSaving(true);
 
-    setIsDialogOpen(false);
-    resetForm();
+    const operation = editingItem ? updateMenuItem(editingItem.id, itemData) : addMenuItem(itemData);
+
+    operation
+      .then(() => {
+        toast.success(editingItem ? 'Menu updated successfully' : 'Menu added successfully');
+        setIsDialogOpen(false);
+        resetForm();
+      })
+      .catch((err) => {
+        toast.error(editingItem ? 'Failed to update menu' : 'Failed to add menu');
+        console.error(err);
+      })
+      .finally(() => {
+        setIsSaving(false);
+      });
   };
 
   const resetForm = () => {
@@ -175,7 +175,11 @@ export function MenuBuilder() {
       const oldIndex = menuItems.findIndex((item) => item.id === active.id);
       const newIndex = menuItems.findIndex((item) => item.id === over.id);
       const reordered = arrayMove(menuItems, oldIndex, newIndex);
-      reorderMenuItems(reordered);
+
+      reorderMenuItems(reordered).catch((err) => {
+        toast.error('Failed to reorder menu items');
+        console.error(err);
+      });
     }
   };
 
@@ -187,25 +191,25 @@ export function MenuBuilder() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Menu Items</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Tambah, edit, atau drag untuk mengatur urutan menu
-            </p>
+            <p className="text-sm text-gray-600 mt-1">Tambah, edit, atau drag untuk mengatur urutan menu</p>
+            {error && <p className="text-sm text-red-600 mt-2">Warning: {error}</p>}
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open : boolean) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open: boolean) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2" disabled={isLoading || isSaving}>
                 <Plus className="size-4" />
                 Tambah Menu
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>
-                  {editingItem ? 'Edit Menu Item' : 'Tambah Menu Item Baru'}
-                </DialogTitle>
+                <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Tambah Menu Item Baru'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -217,6 +221,7 @@ export function MenuBuilder() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Nasi Goreng"
                       required
+                      disabled={isSaving}
                     />
                   </div>
                   <div className="space-y-2">
@@ -226,6 +231,7 @@ export function MenuBuilder() {
                       value={formData.nameEn}
                       onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                       placeholder="Fried Rice"
+                      disabled={isSaving}
                     />
                   </div>
                 </div>
@@ -240,6 +246,7 @@ export function MenuBuilder() {
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       placeholder="25000"
                       required
+                      disabled={isSaving}
                     />
                   </div>
                   <div className="space-y-2">
@@ -251,6 +258,7 @@ export function MenuBuilder() {
                       placeholder="Makanan Utama"
                       list="categories"
                       required
+                      disabled={isSaving}
                     />
                     <datalist id="categories">
                       {categories.map((cat) => (
@@ -269,6 +277,7 @@ export function MenuBuilder() {
                     placeholder="Nasi goreng spesial dengan telur, ayam, dan sayuran"
                     rows={3}
                     required
+                    disabled={isSaving}
                   />
                 </div>
 
@@ -280,6 +289,7 @@ export function MenuBuilder() {
                     onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
                     placeholder="Special fried rice with egg, chicken, and vegetables"
                     rows={3}
+                    disabled={isSaving}
                   />
                 </div>
 
@@ -290,6 +300,7 @@ export function MenuBuilder() {
                     value={formData.image}
                     onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                     placeholder="https://example.com/image.jpg"
+                    disabled={isSaving}
                   />
                   <p className="text-xs text-gray-500">
                     Tip: Upload gambar ke layanan seperti Imgur atau gunakan URL gambar
@@ -304,11 +315,19 @@ export function MenuBuilder() {
                       setIsDialogOpen(false);
                       resetForm();
                     }}
+                    disabled={isSaving}
                   >
                     Batal
                   </Button>
-                  <Button type="submit">
-                    {editingItem ? 'Update' : 'Tambah'} Menu
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader className="size-4 mr-2 animate-spin" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      <>{editingItem ? 'Update' : 'Tambah'} Menu</>
+                    )}
                   </Button>
                 </div>
               </form>
@@ -316,20 +335,18 @@ export function MenuBuilder() {
           </Dialog>
         </div>
 
-        {menuItems.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-500">
+            <Loader className="size-8 mx-auto mb-2 animate-spin" />
+            <p>Loading menu items...</p>
+          </div>
+        ) : menuItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>Belum ada menu item. Klik "Tambah Menu" untuk memulai.</p>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={sortedMenuItems.map((item) => item.id)}
-              strategy={verticalListSortingStrategy}
-            >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={sortedMenuItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
                 {sortedMenuItems.map((item) => (
                   <SortableMenuItem
@@ -338,7 +355,12 @@ export function MenuBuilder() {
                     onEdit={() => handleEdit(item)}
                     onDelete={() => {
                       if (confirm(`Hapus "${item.name}" dari menu?`)) {
-                        deleteMenuItem(item.id);
+                        deleteMenuItem(item.id)
+                          .then(() => toast.success(`${item.name} deleted`))
+                          .catch((err) => {
+                            toast.error('Failed to delete menu item');
+                            console.error(err);
+                          });
                       }
                     }}
                   />

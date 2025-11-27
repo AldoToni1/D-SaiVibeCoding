@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Download, Copy, Check, ExternalLink } from 'lucide-react';
 import MenuList from "../components/MenuList";
 
+
 export default function AdminMenuPage() {
   return (
     <div className="p-6 space-y-6">

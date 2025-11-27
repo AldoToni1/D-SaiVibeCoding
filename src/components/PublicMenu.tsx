@@ -97,19 +97,20 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-center gap-4 overflow-x-auto scrollbar-hide flex-nowrap sm:flex-wrap">
             {categories.map((category) => {
-              const label =
-                category === 'all'
-                  ? categoryLabels.all[language]
-                  : categoryLabels[category]?.[language] || category;
-              return (
-                <CategoryChip
-                  key={category}
-                  label={label}
-                  isSelected={selectedCategory === category}
-                  onClick={() => setSelectedCategory(category)}
-                />
-              );
-            })}
+  // Jika 'all', pakai terjemahan. Jika tidak, pakai nama kategori aslinya (Kapital di awal)
+  const label = category === 'all' 
+    ? (language === 'id' ? 'Semua' : 'All') 
+    : category.charAt(0).toUpperCase() + category.slice(1); 
+
+  return (
+    <CategoryChip
+      key={category}
+      label={label}
+      isSelected={selectedCategory === category}
+      onClick={() => setSelectedCategory(category)}
+    />
+  );
+})}
           </div>
         </div>
       </section>
@@ -193,7 +194,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 {restaurantName}. All rights reserved.</p>
+            <p>&copy; 2025 {restaurantName}. All rights reserved.</p>
           </div>
         </div>
       </footer>

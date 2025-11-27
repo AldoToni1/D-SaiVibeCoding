@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getAllMenus, createMenu, updateMenu, deleteMenu } from '../lib/services/menuService';
 import { getAnalyticsSummary, trackOverallView, trackMenuView } from '../lib/services/analyticsService';
 

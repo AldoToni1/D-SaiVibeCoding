@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useMenu } from '../contexts/MenuContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useCart } from '../contexts/cartcontext';
 import { LanguageToggle } from './LanguageToggle';
 import { CategoryChip } from './CategoryChip';
 import { MenuCard } from './MenuCard';
-import { Moon, Sun, Instagram, Facebook, MapPin, Clock, ArrowLeft } from 'lucide-react';
+import { Moon, Sun, Instagram, Facebook, MapPin, Clock, ArrowLeft, ShoppingCart, X } from 'lucide-react';
 import { Button } from './ui/button';
+import Checkout from './CheckoutPage';
 
 export function PublicMenu({ onBack }: { onBack?: () => void }) {
   const { menuItems, settings, trackView } = useMenu();
   const { language, setLanguage, t } = useLanguage();
+  const { cart, getTotalItems } = useCart();
+  const totalItems = getTotalItems();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [showCart, setShowCart] = useState(false);
 
   useEffect(() => {
     trackView();
@@ -36,16 +41,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
 
   const sortedItems = [...filteredItems].sort((a, b) => a.order - b.order);
 
-  const handleOrderClick = (item: any) => {
-    const itemName = language === 'id' ? item.name : item.nameEn || item.name;
-    const restaurantName =
-      language === 'id' ? settings.restaurantName : settings.restaurantNameEn || settings.restaurantName;
-    const message =
-      language === 'id'
-        ? `Halo ${restaurantName}, saya ingin pesan ${itemName}.`
-        : `Hello ${restaurantName}, I would like to order ${itemName}.`;
-    const whatsappUrl = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+  const handleAddToCart = (item: any) => {
     trackView(item.id);
   };
 
@@ -85,6 +81,19 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                   <Moon className="w-5 h-5 text-gray-600" />
                 ) : (
                   <Sun className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+              {/* Cart Icon */}
+              <button
+                onClick={() => setShowCart(true)}
+                className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Shopping cart"
+              >
+                <ShoppingCart className="w-5 h-5 text-gray-600" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 animate-pulse">
+                    {totalItems > 99 ? '99+' : totalItems}
+                  </span>
                 )}
               </button>
             </div>
@@ -135,8 +144,8 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
                   name={itemName || 'Menu Item'}
                   description={itemDescription || 'No description'}
                   price={price}
-                  onOrderClick={() => handleOrderClick(item)}
-                  whatsappLabel={orderViaWhatsApp}
+                  itemId={item.id}
+                  onAddToCart={() => handleAddToCart(item)}
                 />
               );
             })}
@@ -197,6 +206,73 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
           </div>
         </div>
       </footer>
+
+      {/* Cart Sidebar Modal */}
+      {showCart && (
+        <div 
+          className="fixed inset-0 overflow-hidden" 
+          style={{ 
+            zIndex: 9999,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'auto'
+          }}
+        >
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity" 
+            onClick={() => setShowCart(false)}
+            style={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1
+            }}
+          />
+          
+          {/* Cart Sidebar */}
+          <div 
+            className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col"
+            style={{ 
+              position: 'absolute',
+              zIndex: 2,
+              top: 0,
+              right: 0,
+              height: '100%',
+              maxWidth: '28rem'
+            }}
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm z-10">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {language === 'id' ? 'Keranjang Belanja' : 'Shopping Cart'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {totalItems} {language === 'id' ? 'item' : 'items'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCart(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close cart"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <Checkout />
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {

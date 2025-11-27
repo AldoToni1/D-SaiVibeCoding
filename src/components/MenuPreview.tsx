@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMenu } from '../contexts/MenuContext';
 import { Card } from './ui/card';
 import { Button } from './ui/button';

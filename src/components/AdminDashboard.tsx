@@ -9,6 +9,7 @@ import { PublicMenu } from './PublicMenu';
 import { MenuSorter } from './MenuSorter';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { MenuProvider } from '../contexts/MenuContext';
+import { CartProvider } from '../contexts/cartcontext';
 import { LayoutDashboard, Eye, BarChart3, Palette, Menu, GripVertical, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Toaster } from './ui/sonner';
@@ -36,7 +37,9 @@ export default function AdminDashboard() {
     return (
       <LanguageProvider>
         <MenuProvider>
-          <PublicMenu onBack={() => setShowPublicView(false)} />
+          <CartProvider>
+            <PublicMenu onBack={() => setShowPublicView(false)} />
+          </CartProvider>
         </MenuProvider>
       </LanguageProvider>
     );

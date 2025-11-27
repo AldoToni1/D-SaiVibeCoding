@@ -7,9 +7,9 @@
 
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { MenuSorter } from './MenuSorter';
 import { useMenu } from '../contexts/MenuContext';
-import { useState, useEffect } from 'react';
 import type { MenuItem as MenuSorterItem } from './MenuSorter';
 import type { MenuItem as ContextMenuItem } from '../contexts/MenuContext';
 

@@ -16,6 +16,8 @@ export interface MenuItem {
 }
 
 export interface MenuSettings {
+  openHours: string;
+  address: ReactNode;
   restaurantName: string;
   restaurantNameEn?: string;
   whatsappNumber: string;

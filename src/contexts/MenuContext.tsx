@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // --- Tipe Data ---
 export interface MenuItem {
@@ -16,12 +16,13 @@ export interface MenuItem {
 }
 
 export interface MenuSettings {
-  openHours: string;
-  address: ReactNode;
   restaurantName: string;
   restaurantNameEn?: string;
   whatsappNumber: string;
   template: 'minimalist' | 'colorful' | 'elegant' | 'modern';
+  // Field tambahan untuk kompatibilitas dengan kode UI lama
+  openHours?: string; 
+  address?: ReactNode;
 }
 
 interface Analytics {
@@ -46,7 +47,11 @@ interface MenuContextType {
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
 
-// 🔥 DATA DUMMY GLOBAL (Agar muncul di Builder, Sorter & Public View)
+// 🔥 KUNCI PENYIMPANAN (PENTING: Harus sama di seluruh aplikasi)
+const STORAGE_KEY_ITEMS = 'menuKu_items'; 
+const STORAGE_KEY_SETTINGS = 'menuKu_settings';
+
+// DATA DUMMY DEFAULT (Hanya muncul jika LocalStorage kosong)
 const DUMMY_MENU_ITEMS: MenuItem[] = [
   {
     id: '1',
@@ -92,50 +97,75 @@ const DUMMY_MENU_ITEMS: MenuItem[] = [
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop',
     order: 3,
   },
-  {
-    id: '5',
-    name: 'Kopi Susu Gula Aren',
-    nameEn: 'Palm Sugar Coffee Latte',
-    price: 18000,
-    description: 'Kopi susu kekinian dengan gula aren asli',
-    descriptionEn: 'Modern milk coffee with real palm sugar',
-    category: 'Kopi',
-    image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&h=400&fit=crop',
-    order: 4,
-  },
-  {
-    id: '6',
-    name: 'Pisang Goreng Keju',
-    nameEn: 'Cheese Fried Banana',
-    price: 15000,
-    description: 'Pisang goreng crispy dengan topping keju dan susu',
-    descriptionEn: 'Crispy fried banana topped with cheese and milk',
-    category: 'Dessert',
-    image: 'https://images.unsplash.com/photo-1519676867240-f03562e64548?w=400&h=400&fit=crop',
-    order: 5,
-  },
 ];
 
 export function MenuProvider({ children }: { children: ReactNode }) {
-  // ✅ Langsung isi state dengan DATA DUMMY
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(DUMMY_MENU_ITEMS);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [settings, setSettings] = useState<MenuSettings>({
-    restaurantName: 'DSAI Kitchen',
-    restaurantNameEn: 'DSAI Kitchen',
-    whatsappNumber: '628123456789',
-    template: 'modern',
+  // 1. INITIALIZE: Cek LocalStorage dulu, kalau kosong baru pakai DUMMY
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY_ITEMS);
+      // Jika ada data tersimpan, pakai itu. Jika tidak, pakai DUMMY.
+      return saved ? JSON.parse(saved) : DUMMY_MENU_ITEMS;
+    }
+    return DUMMY_MENU_ITEMS;
   });
 
+  const [settings, setSettings] = useState<MenuSettings>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
+      return saved ? JSON.parse(saved) : {
+        restaurantName: 'DSAI Kitchen',
+        restaurantNameEn: 'DSAI Kitchen',
+        whatsappNumber: '628123456789',
+        template: 'modern',
+        openHours: '10:00 - 22:00',
+        address: 'Jl. Contoh No. 123, Jakarta'
+      };
+    }
+    return {
+        restaurantName: 'DSAI Kitchen',
+        restaurantNameEn: 'DSAI Kitchen',
+        whatsappNumber: '628123456789',
+        template: 'modern',
+        openHours: '10:00 - 22:00',
+        address: 'Jl. Contoh No. 123, Jakarta'
+    };
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<Analytics>({
     totalViews: 1250,
-    itemViews: { '1': 450, '2': 300, '5': 200 },
+    itemViews: {},
     lastViewed: new Date().toISOString(),
   });
 
-  // --- FUNGSI CRUD SIMULASI (Hanya update state, tidak ke DB) ---
+  // 2. AUTO-SAVE: Setiap kali menu/settings berubah, simpan ke LocalStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(menuItems));
+  }, [menuItems]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+  }, [settings]);
+
+  // 3. SYNC ANTAR TAB: Biar Admin & Public View nyambung real-time
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY_ITEMS && event.newValue) {
+        console.log("Syncing items from other tab...");
+        setMenuItems(JSON.parse(event.newValue));
+      }
+      if (event.key === STORAGE_KEY_SETTINGS && event.newValue) {
+        console.log("Syncing settings from other tab...");
+        setSettings(JSON.parse(event.newValue));
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // --- CRUD ACTIONS (Modifikasi State) ---
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'order'>) => {
     const newItem = { ...item, id: Date.now().toString(), order: menuItems.length };
@@ -151,6 +181,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   };
 
   const reorderMenuItems = async (items: MenuItem[]) => {
+    // Update state lokal. Karena ada useEffect di atas, ini otomatis tersimpan ke LocalStorage
     setMenuItems(items);
   };
 

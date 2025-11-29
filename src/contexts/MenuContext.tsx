@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getAllMenus, createMenu, updateMenu, deleteMenu } from '../lib/services/menuService';
 
 // --- Tipe Data ---
 export interface MenuItem {
@@ -20,6 +21,19 @@ export interface MenuSettings {
   restaurantNameEn?: string;
   whatsappNumber: string;
   template: 'minimalist' | 'colorful' | 'elegant' | 'modern';
+  // Field template color (untuk custom warna background dan card)
+  templateColor?: {
+    name: string;
+    bgGradient: string;
+    bgClass: string;
+    cardBg: string;
+    cardBorder: string;
+    headerBg: string;
+    textPrimary: string;
+    accentColor: string;
+    buttonBg: string;
+    buttonHover: string;
+  };
   // Field tambahan untuk kompatibilitas dengan kode UI lama
   openHours?: string;
   address?: ReactNode;
@@ -28,6 +42,7 @@ export interface MenuSettings {
 interface Analytics {
   totalViews: number;
   itemViews: Record<string, number>;
+  itemNames: Record<string, string>;
   lastViewed: string;
 }
 
@@ -40,7 +55,8 @@ interface MenuContextType {
   deleteMenuItem: (id: string) => Promise<void>;
   reorderMenuItems: (items: MenuItem[]) => Promise<void>;
   updateSettings: (settings: Partial<MenuSettings>) => void;
-  trackView: (itemId?: string) => Promise<void>;
+  trackView: (itemId?: string, itemName?: string) => Promise<void>;
+  resetAnalytics: () => void;
   isLoading: boolean;
   error: string | null;
 }
@@ -136,10 +152,26 @@ export function MenuProvider({ children }: { children: ReactNode }) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analytics, setAnalytics] = useState<Analytics>({
-    totalViews: 1250,
-    itemViews: {},
-    lastViewed: new Date().toISOString(),
+  const [analytics, setAnalytics] = useState<Analytics>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('menuKu_analytics');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migrate old data to include itemNames if missing
+        return {
+          totalViews: parsed.totalViews || 0,
+          itemViews: parsed.itemViews || {},
+          itemNames: parsed.itemNames || {},
+          lastViewed: parsed.lastViewed || new Date().toISOString(),
+        };
+      }
+    }
+    return {
+      totalViews: 0,
+      itemViews: {},
+      itemNames: {},
+      lastViewed: new Date().toISOString(),
+    };
   });
 
   // 2. AUTO-SAVE: Setiap kali menu/settings berubah, simpan ke LocalStorage
@@ -167,32 +199,149 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // --- CRUD ACTIONS (Modifikasi State) ---
+  // 4. LOAD DATA FROM SUPABASE: Fetch menu items saat component mount
+  useEffect(() => {
+    const loadMenusFromSupabase = async () => {
+      try {
+        setIsLoading(true);
+        const supabaseMenus = await getAllMenus();
+        if (supabaseMenus && supabaseMenus.length > 0) {
+          console.log('Loaded menus from Supabase:', supabaseMenus);
+          setMenuItems(supabaseMenus);
+        } else {
+          console.log('No menus in Supabase, using localStorage or dummy data');
+        }
+      } catch (err) {
+        console.error('Failed to load menus from Supabase:', err);
+        setError('Failed to load menus from Supabase');
+        // Fallback ke localStorage jika Supabase error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMenusFromSupabase();
+  }, []);
+
+  // --- CRUD ACTIONS (Modifikasi State + Supabase) ---
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'order'>) => {
-    const newItem = { ...item, id: Date.now().toString(), order: menuItems.length };
-    setMenuItems((prev) => [...prev, newItem]);
+    try {
+      setIsLoading(true);
+      // Create di Supabase terlebih dahulu
+      const newItemFromSupabase = await createMenu(item);
+      // Update local state
+      setMenuItems((prev) => [...prev, newItemFromSupabase]);
+      setError(null);
+    } catch (err) {
+      console.error('Error adding menu item:', err);
+      setError('Failed to add menu item');
+      // Fallback: tambah ke local state saja
+      const newItem = { ...item, id: Date.now().toString(), order: menuItems.length };
+      setMenuItems((prev) => [...prev, newItem]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateMenuItem = async (id: string, updates: Partial<MenuItem>) => {
-    setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+    try {
+      setIsLoading(true);
+      // Update di Supabase terlebih dahulu
+      const updatedItemFromSupabase = await updateMenu(id, updates);
+      // Update local state
+      setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updatedItemFromSupabase } : item)));
+      setError(null);
+    } catch (err) {
+      console.error('Error updating menu item:', err);
+      setError('Failed to update menu item');
+      // Fallback: update local state saja
+      setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const deleteMenuItem = async (id: string) => {
-    setMenuItems((prev) => prev.filter((item) => item.id !== id));
+    try {
+      setIsLoading(true);
+      // Delete di Supabase terlebih dahulu
+      await deleteMenu(id);
+      // Update local state
+      setMenuItems((prev) => prev.filter((item) => item.id !== id));
+      setError(null);
+    } catch (err) {
+      console.error('Error deleting menu item:', err);
+      setError('Failed to delete menu item');
+      // Fallback: delete dari local state saja
+      setMenuItems((prev) => prev.filter((item) => item.id !== id));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const reorderMenuItems = async (items: MenuItem[]) => {
-    // Update state lokal. Karena ada useEffect di atas, ini otomatis tersimpan ke LocalStorage
-    setMenuItems(items);
+    try {
+      setIsLoading(true);
+      // Update state lokal dengan order baru
+      const itemsWithNewOrder = items.map((item, index) => ({
+        ...item,
+        order: index,
+      }));
+      setMenuItems(itemsWithNewOrder);
+      // Note: Order tidak disimpan ke Supabase, hanya ke localStorage
+      setError(null);
+    } catch (err) {
+      console.error('Error reordering menu items:', err);
+      setError('Failed to reorder menu items');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateSettings = (updates: Partial<MenuSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
   };
 
-  const trackView = async (itemId?: string) => {
-    console.log('View tracked:', itemId || 'Overall');
+  const trackView = async (itemId?: string, itemName?: string) => {
+    setAnalytics((prev) => {
+      const updated = {
+        ...prev,
+        totalViews: prev.totalViews + 1,
+        lastViewed: new Date().toISOString(),
+        itemViews: itemId
+          ? {
+              ...prev.itemViews,
+              [itemId]: (prev.itemViews[itemId] || 0) + 1,
+            }
+          : prev.itemViews,
+        itemNames:
+          itemId && itemName
+            ? {
+                ...prev.itemNames,
+                [itemId]: itemName,
+              }
+            : prev.itemNames,
+      };
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('menuKu_analytics', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const resetAnalytics = () => {
+    const freshAnalytics: Analytics = {
+      totalViews: 0,
+      itemViews: {},
+      itemNames: {},
+      lastViewed: new Date().toISOString(),
+    };
+    setAnalytics(freshAnalytics);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('menuKu_analytics', JSON.stringify(freshAnalytics));
+    }
   };
 
   return (
@@ -207,6 +356,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         reorderMenuItems,
         updateSettings,
         trackView,
+        resetAnalytics,
         isLoading,
         error,
       }}

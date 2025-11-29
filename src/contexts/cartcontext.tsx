@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export interface CartItem {
   id: string;
@@ -11,15 +11,18 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (item: Omit<CartItem, "qty">) => void;
+  addToCart: (item: Omit<CartItem, 'qty'>) => void;
   removeFromCart: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  getQuantity: (id: string) => number;
+  decrementQuantity: (id: string) => void;
+  incrementQuantity: (id: string) => void;
 }
 
-const STORAGE_KEY = "menuKu_cart";
+const STORAGE_KEY = 'menuKu_cart';
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
@@ -36,12 +39,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   };
 
-  const addToCart = (item: Omit<CartItem, "qty">) => {
+  const addToCart = (item: Omit<CartItem, 'qty'>) => {
     const existing = cart.find((i) => i.id === item.id);
     if (existing) {
-      sync(cart.map(i =>
-        i.id === item.id ? { ...i, qty: i.qty + 1 } : i
-      ));
+      sync(cart.map((i) => (i.id === item.id ? { ...i, qty: i.qty + 1 } : i)));
     } else {
       sync([...cart, { ...item, qty: 1 }]);
     }
@@ -56,7 +57,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       // Jika qty <= 0, hapus dari cart
       sync(cart.filter((i) => i.id !== id));
     } else {
-      sync(cart.map(i => i.id === id ? { ...i, qty } : i));
+      sync(cart.map((i) => (i.id === id ? { ...i, qty } : i)));
     }
   };
 
@@ -70,16 +71,46 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return cart.reduce((total, item) => total + item.qty * item.price, 0);
   };
 
+  const getQuantity = (id: string) => {
+    const item = cart.find((i) => i.id === id);
+    return item ? item.qty : 0;
+  };
+
+  const decrementQuantity = (id: string) => {
+    const existing = cart.find((i) => i.id === id);
+    if (existing) {
+      if (existing.qty <= 1) {
+        // Jika kuantitas <= 1, hapus dari keranjang
+        sync(cart.filter((i) => i.id !== id));
+      } else {
+        // Kurangi kuantitas
+        sync(cart.map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i)));
+      }
+    }
+  };
+
+  const incrementQuantity = (id: string) => {
+    const existing = cart.find((i) => i.id === id);
+    if (existing) {
+      sync(cart.map((i) => (i.id === id ? { ...i, qty: i.qty + 1 } : i)));
+    }
+  };
+
   return (
-    <CartContext.Provider value={{ 
-      cart, 
-      addToCart, 
-      removeFromCart, 
-      updateQty, 
-      clearCart,
-      getTotalItems,
-      getTotalPrice
-    }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        addToCart,
+        removeFromCart,
+        updateQty,
+        clearCart,
+        getTotalItems,
+        getTotalPrice,
+        getQuantity,
+        decrementQuantity,
+        incrementQuantity,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
@@ -87,6 +118,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
 export const useCart = () => {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used inside CartProvider");
+  if (!ctx) throw new Error('useCart must be used inside CartProvider');
   return ctx;
 };

@@ -8,7 +8,7 @@ import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 // Icon lengkap
-import { Plus, Pencil, Trash2, GripVertical, Loader, Upload, X, UploadCloud } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Loader, Upload, X, UploadCloud, Languages } from 'lucide-react';
 
 import {
   DndContext,
@@ -30,6 +30,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { MenuItem } from '../contexts/MenuContext';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
+import { translateIdToEn, translateEnToId } from '../lib/utils/translate';
 
 // --- Tipe Data Form ---
 interface MenuItemFormData {
@@ -132,6 +133,8 @@ export function MenuBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false); // State untuk sync
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isTranslatingName, setIsTranslatingName] = useState(false);
+  const [isTranslatingDescription, setIsTranslatingDescription] = useState(false);
 
   const [formData, setFormData] = useState<MenuItemFormData>({
     name: '',
@@ -204,8 +207,8 @@ export function MenuBuilder() {
       name: formData.name,
       nameEn: formData.nameEn || undefined,
       price: parseFloat(formData.price) || 0,
-      description: formData.description,
-      descriptionEn: formData.descriptionEn || undefined,
+      description: formData.description || '',
+      descriptionEn: formData.descriptionEn || '',
       category: formData.category,
       image: formData.image || undefined,
     };
@@ -276,6 +279,82 @@ export function MenuBuilder() {
     if (fileInput) fileInput.value = '';
   };
 
+  // --- HANDLER: Translate Nama (ID -> EN) ---
+  const handleTranslateName = async () => {
+    if (!formData.name || formData.name.trim() === '') {
+      toast.error('Masukkan nama menu dalam Bahasa Indonesia terlebih dahulu');
+      return;
+    }
+
+    setIsTranslatingName(true);
+    try {
+      const translated = await translateIdToEn(formData.name);
+      setFormData({ ...formData, nameEn: translated });
+      toast.success('Nama berhasil diterjemahkan');
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal menerjemahkan nama');
+    } finally {
+      setIsTranslatingName(false);
+    }
+  };
+
+  // --- HANDLER: Translate Nama (EN -> ID) ---
+  const handleTranslateNameReverse = async () => {
+    if (!formData.nameEn || formData.nameEn.trim() === '') {
+      toast.error('Masukkan nama menu dalam Bahasa Inggris terlebih dahulu');
+      return;
+    }
+
+    setIsTranslatingName(true);
+    try {
+      const translated = await translateEnToId(formData.nameEn);
+      setFormData({ ...formData, name: translated });
+      toast.success('Nama berhasil diterjemahkan');
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal menerjemahkan nama');
+    } finally {
+      setIsTranslatingName(false);
+    }
+  };
+
+  // --- HANDLER: Translate Deskripsi (ID -> EN) ---
+  const handleTranslateDescription = async () => {
+    if (!formData.description || formData.description.trim() === '') {
+      toast.error('Masukkan deskripsi dalam Bahasa Indonesia terlebih dahulu');
+      return;
+    }
+
+    setIsTranslatingDescription(true);
+    try {
+      const translated = await translateIdToEn(formData.description);
+      setFormData({ ...formData, descriptionEn: translated });
+      toast.success('Deskripsi berhasil diterjemahkan');
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal menerjemahkan deskripsi');
+    } finally {
+      setIsTranslatingDescription(false);
+    }
+  };
+
+  // --- HANDLER: Translate Deskripsi (EN -> ID) ---
+  const handleTranslateDescriptionReverse = async () => {
+    if (!formData.descriptionEn || formData.descriptionEn.trim() === '') {
+      toast.error('Masukkan deskripsi dalam Bahasa Inggris terlebih dahulu');
+      return;
+    }
+
+    setIsTranslatingDescription(true);
+    try {
+      const translated = await translateEnToId(formData.descriptionEn);
+      setFormData({ ...formData, description: translated });
+      toast.success('Deskripsi berhasil diterjemahkan');
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal menerjemahkan deskripsi');
+    } finally {
+      setIsTranslatingDescription(false);
+    }
+  };
+
   // --- HANDLER: Edit Button ---
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
@@ -283,7 +362,7 @@ export function MenuBuilder() {
       name: item.name,
       nameEn: item.nameEn || '',
       price: item.price.toString(),
-      description: item.description,
+      description: item.description || '',
       descriptionEn: item.descriptionEn || '',
       category: item.category,
       image: item.image || '',
@@ -355,7 +434,24 @@ export function MenuBuilder() {
                   {/* Input Nama */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nama Menu (ID) *</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="name">Nama Menu (ID) *</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleTranslateName}
+                          disabled={isSaving || isTranslatingName || !formData.name}
+                          className="h-7 px-2 text-xs"
+                          title="Terjemahkan ke Bahasa Inggris"
+                        >
+                          {isTranslatingName ? (
+                            <Loader className="size-3 animate-spin" />
+                          ) : (
+                            <Languages className="size-3" />
+                          )}
+                        </Button>
+                      </div>
                       <Input
                         id="name"
                         value={formData.name}
@@ -366,7 +462,24 @@ export function MenuBuilder() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nameEn">Menu Name (EN)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="nameEn">Menu Name (EN)</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleTranslateNameReverse}
+                          disabled={isSaving || isTranslatingName || !formData.nameEn}
+                          className="h-7 px-2 text-xs"
+                          title="Terjemahkan ke Bahasa Indonesia"
+                        >
+                          {isTranslatingName ? (
+                            <Loader className="size-3 animate-spin" />
+                          ) : (
+                            <Languages className="size-3" />
+                          )}
+                        </Button>
+                      </div>
                       <Input
                         id="nameEn"
                         value={formData.nameEn}
@@ -412,7 +525,24 @@ export function MenuBuilder() {
 
                   {/* Input Deskripsi */}
                   <div className="space-y-2">
-                    <Label htmlFor="description">Deskripsi (ID) *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="description">Deskripsi (ID) *</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleTranslateDescription}
+                        disabled={isSaving || isTranslatingDescription || !formData.description}
+                        className="h-7 px-2 text-xs"
+                        title="Terjemahkan ke Bahasa Inggris"
+                      >
+                        {isTranslatingDescription ? (
+                          <Loader className="size-3 animate-spin" />
+                        ) : (
+                          <Languages className="size-3" />
+                        )}
+                      </Button>
+                    </div>
                     <Textarea
                       id="description"
                       value={formData.description}
@@ -423,7 +553,24 @@ export function MenuBuilder() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="descriptionEn">Description (EN)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="descriptionEn">Description (EN)</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleTranslateDescriptionReverse}
+                        disabled={isSaving || isTranslatingDescription || !formData.descriptionEn}
+                        className="h-7 px-2 text-xs"
+                        title="Terjemahkan ke Bahasa Indonesia"
+                      >
+                        {isTranslatingDescription ? (
+                          <Loader className="size-3 animate-spin" />
+                        ) : (
+                          <Languages className="size-3" />
+                        )}
+                      </Button>
+                    </div>
                     <Textarea
                       id="descriptionEn"
                       value={formData.descriptionEn}

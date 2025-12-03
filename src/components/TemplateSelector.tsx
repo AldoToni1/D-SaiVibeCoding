@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -73,7 +74,7 @@ export default function TemplateSelector({ settings, setSettings }: TemplateSele
                 id="restaurantName"
                 value={settings.restaurantName}
                 onChange={(e) => setSettings({ ...settings, restaurantName: e.target.value })}
-                placeholder="Warung Makan Bahagia"
+                placeholder="D'Sai Kitchen"
               />
             </div>
             <div className="space-y-2">
@@ -82,7 +83,7 @@ export default function TemplateSelector({ settings, setSettings }: TemplateSele
                 id="restaurantNameEn"
                 value={settings.restaurantNameEn}
                 onChange={(e) => setSettings({ ...settings, restaurantNameEn: e.target.value })}
-                placeholder="Happy Food Restaurant"
+                placeholder="D'Sai Kitchen"
               />
             </div>
           </div>

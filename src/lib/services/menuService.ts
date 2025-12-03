@@ -4,9 +4,14 @@ import type { MenuItem } from '../../contexts/MenuContext';
 export interface MenuRow {
   id: string;
   name: string;
+  name_en?: string | null;
+  nameEn?: string | null;
   price: number;
   description: string;
+  description_en?: string | null;
+  descriptionEn?: string | null;
   category: string;
+  order?: number;
   created_at: string;
 }
 
@@ -30,17 +35,19 @@ export async function getAllMenus(): Promise<MenuItemWithPhotos[]> {
 
     // Fetch photos for each menu
     const menusWithPhotos = await Promise.all(
-      menus.map(async (menu) => {
+      menus.map(async (menu: MenuRow) => {
         const photos = await getMenuPhotos(menu.id);
         return {
           id: menu.id,
           name: menu.name,
+          nameEn: menu.name_en || menu.nameEn || undefined,
           price: menu.price,
           description: menu.description || '',
+          descriptionEn: menu.description_en || menu.descriptionEn || undefined,
           category: menu.category || '',
           image: photos[0] || undefined,
           photos: photos,
-          order: 0,
+          order: menu.order || 0,
         } as MenuItemWithPhotos;
       })
     );
@@ -67,12 +74,14 @@ export async function getMenuById(id: string): Promise<MenuItemWithPhotos | null
     return {
       id: menu.id,
       name: menu.name,
+      nameEn: menu.name_en || menu.nameEn || undefined,
       price: menu.price,
       description: menu.description || '',
+      descriptionEn: menu.description_en || menu.descriptionEn || undefined,
       category: menu.category || '',
       image: photos[0] || undefined,
       photos: photos,
-      order: 0,
+      order: menu.order || 0,
     };
   } catch (error) {
     console.error('Error fetching menu:', error);
@@ -90,8 +99,10 @@ export async function createMenu(menuData: Omit<MenuItem, 'id' | 'order'>): Prom
       .insert([
         {
           name: menuData.name,
+          name_en: menuData.nameEn || null,
           price: menuData.price,
           description: menuData.description,
+          description_en: menuData.descriptionEn || null,
           category: menuData.category,
         },
       ])
@@ -106,14 +117,15 @@ export async function createMenu(menuData: Omit<MenuItem, 'id' | 'order'>): Prom
       photos = await addMenuPhoto(menu.id, menuData.image);
     }
 
+    const menuRow = menu as MenuRow;
     return {
-      id: menu.id,
-      name: menu.name,
-      nameEn: menuData.nameEn,
-      price: menu.price,
-      description: menu.description || '',
-      descriptionEn: menuData.descriptionEn,
-      category: menu.category || '',
+      id: menuRow.id,
+      name: menuRow.name,
+      nameEn: menuRow.name_en || menuRow.nameEn || menuData.nameEn || undefined,
+      price: menuRow.price,
+      description: menuRow.description || '',
+      descriptionEn: menuRow.description_en || menuRow.descriptionEn || menuData.descriptionEn || undefined,
+      category: menuRow.category || '',
       image: menuData.image,
       photos: photos,
       order: 0,
@@ -135,8 +147,10 @@ export async function updateMenu(
     const updateData: any = {};
 
     if (updates.name) updateData.name = updates.name;
+    if (updates.nameEn !== undefined) updateData.name_en = updates.nameEn || null;
     if (updates.price) updateData.price = updates.price;
     if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.descriptionEn !== undefined) updateData.description_en = updates.descriptionEn || null;
     if (updates.category) updateData.category = updates.category;
 
     const { data: menu, error } = await supabase.from('menus').update(updateData).eq('id', id).select().single();
@@ -152,15 +166,18 @@ export async function updateMenu(
       photos = await addMenuPhoto(id, updates.image);
     }
 
+    const menuRow = menu as MenuRow;
     return {
-      id: menu.id,
-      name: menu.name,
-      price: menu.price,
-      description: menu.description || '',
-      category: menu.category || '',
+      id: menuRow.id,
+      name: menuRow.name,
+      nameEn: menuRow.name_en || menuRow.nameEn || updates.nameEn || undefined,
+      price: menuRow.price,
+      description: menuRow.description || '',
+      descriptionEn: menuRow.description_en || menuRow.descriptionEn || updates.descriptionEn || undefined,
+      category: menuRow.category || '',
       image: photos[0] || undefined,
       photos: photos,
-      order: 0,
+      order: menuRow.order || 0,
     };
   } catch (error) {
     console.error('Error updating menu:', error);

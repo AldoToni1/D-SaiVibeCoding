@@ -1,7 +1,7 @@
 'use client';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getAllMenus, createMenu, updateMenu, deleteMenu } from '../lib/services/menuService';
-
+import { useLanguage } from '../contexts/LanguageContext';
 // --- Tipe Data ---
 export interface MenuItem {
   id: string;
@@ -67,87 +67,45 @@ const MenuContext = createContext<MenuContextType | undefined>(undefined);
 const STORAGE_KEY_ITEMS = 'menuKu_items';
 const STORAGE_KEY_SETTINGS = 'menuKu_settings';
 
-// DATA DUMMY DEFAULT (Hanya muncul jika LocalStorage kosong)
-const DUMMY_MENU_ITEMS: MenuItem[] = [
-  {
-    id: '1',
-    name: 'Nasi Goreng Spesial',
-    nameEn: 'Special Fried Rice',
-    price: 25000,
-    description: 'Nasi goreng dengan telur, ayam suwir, dan kerupuk',
-    descriptionEn: 'Fried rice with egg, shredded chicken, and crackers',
-    category: 'Makanan Utama',
-    image: 'https://images.unsplash.com/photo-1603133872878-684f571d70f2?w=400&h=400&fit=crop',
-    order: 0,
-  },
-  {
-    id: '2',
-    name: 'Mie Ayam Bakso',
-    nameEn: 'Chicken Noodle with Meatball',
-    price: 18000,
-    description: 'Mie ayam jamur dengan tambahan bakso sapi asli',
-    descriptionEn: 'Mushroom chicken noodles with real beef meatballs',
-    category: 'Makanan Utama',
-    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400&h=400&fit=crop',
-    order: 1,
-  },
-  {
-    id: '3',
-    name: 'Es Teh Manis',
-    nameEn: 'Sweet Iced Tea',
-    price: 5000,
-    description: 'Teh manis dingin segar',
-    descriptionEn: 'Fresh sweet iced tea',
-    category: 'Minuman',
-    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop',
-    order: 2,
-  },
-  {
-    id: '4',
-    name: 'Sate Ayam Madura',
-    nameEn: 'Chicken Satay',
-    price: 30000,
-    description: '10 tusuk sate ayam dengan bumbu kacang khas Madura',
-    descriptionEn: '10 skewers of chicken satay with Madura peanut sauce',
-    category: 'Makanan Utama',
-    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop',
-    order: 3,
-  },
-];
-
 export function MenuProvider({ children }: { children: ReactNode }) {
-  // 1. INITIALIZE: Cek LocalStorage dulu, kalau kosong baru pakai DUMMY
+  // 1. INITIALIZE: Mulai dengan array kosong, data akan di-load dari Supabase
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_ITEMS);
-      // Jika ada data tersimpan, pakai itu. Jika tidak, pakai DUMMY.
-      return saved ? JSON.parse(saved) : DUMMY_MENU_ITEMS;
+      // Jika ada data tersimpan di localStorage, pakai itu sebagai fallback sementara
+      // Tapi data utama akan di-load dari Supabase dan akan replace ini
+      return saved ? JSON.parse(saved) : [];
     }
-    return DUMMY_MENU_ITEMS;
+    return [];
   });
 
   const [settings, setSettings] = useState<MenuSettings>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      return saved
-        ? JSON.parse(saved)
-        : {
-            restaurantName: 'DSAI Kitchen',
-            restaurantNameEn: 'DSAI Kitchen',
-            whatsappNumber: '628123456789',
-            template: 'modern',
-            openHours: '10:00 - 22:00',
-            address: 'Jl. Contoh No. 123, Jakarta',
-          };
-    }
-    return {
+    const defaultSettings = {
       restaurantName: 'DSAI Kitchen',
       restaurantNameEn: 'DSAI Kitchen',
-      whatsappNumber: '628123456789',
-      template: 'modern',
+      whatsappNumber: '6281227281923',
+      template: 'modern' as const,
       openHours: '10:00 - 22:00',
       address: 'Jl. Contoh No. 123, Jakarta',
     };
+
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Update jika restaurantName masih "Rumah Makan Saya" atau kosong
+        if (parsed.restaurantName === 'Rumah Makan Saya' || !parsed.restaurantName) {
+          parsed.restaurantName = defaultSettings.restaurantName;
+        }
+        // Update jika restaurantNameEn adalah "My Restaurant" atau kosong atau tidak ada
+        if (parsed.restaurantNameEn === 'My Restaurant' || !parsed.restaurantNameEn) {
+          parsed.restaurantNameEn = defaultSettings.restaurantNameEn;
+        }
+        return parsed;
+      }
+      return defaultSettings;
+    }
+    return defaultSettings;
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -174,7 +132,32 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     };
   });
 
-  // 2. AUTO-SAVE: Setiap kali menu/settings berubah, simpan ke LocalStorage
+  // 2. MIGRATE SETTINGS: Update settings jika masih menggunakan nilai lama
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let needsUpdate = false;
+      const updatedSettings = { ...settings };
+      
+      // Update jika restaurantName masih "Rumah Makan Saya"
+      if (settings.restaurantName === 'Rumah Makan Saya') {
+        updatedSettings.restaurantName = 'DSAI Kitchen';
+        needsUpdate = true;
+      }
+      
+      // Update jika restaurantNameEn adalah "My Restaurant" atau kosong
+      if (settings.restaurantNameEn === 'My Restaurant' || !settings.restaurantNameEn) {
+        updatedSettings.restaurantNameEn = 'DSAI Kitchen';
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+        setSettings(updatedSettings);
+        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(updatedSettings));
+      }
+    }
+  }, []); // Hanya sekali saat mount
+
+  // 3. AUTO-SAVE: Setiap kali menu/settings berubah, simpan ke LocalStorage
   // Filter out base64 images to prevent quota exceeded errors
   useEffect(() => {
     try {
@@ -224,17 +207,22 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     const loadMenusFromSupabase = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         const supabaseMenus = await getAllMenus();
         if (supabaseMenus && supabaseMenus.length > 0) {
           console.log('Loaded menus from Supabase:', supabaseMenus);
+          // Set data dari Supabase (akan replace data dari localStorage jika ada)
           setMenuItems(supabaseMenus);
         } else {
-          console.log('No menus in Supabase, using localStorage or dummy data');
+          console.log('No menus in Supabase');
+          // Jika tidak ada data di Supabase, set ke array kosong (tidak pakai dummy)
+          setMenuItems([]);
         }
       } catch (err) {
         console.error('Failed to load menus from Supabase:', err);
         setError('Failed to load menus from Supabase');
-        // Fallback ke localStorage jika Supabase error
+        // Jika error, tetap gunakan data dari localStorage jika ada (tidak pakai dummy)
+        // menuItems sudah di-set dari localStorage di initial state
       } finally {
         setIsLoading(false);
       }

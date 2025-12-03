@@ -1,3 +1,4 @@
+import React from 'react';
 import { useMenu } from '../contexts/MenuContext';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -170,7 +171,7 @@ export function TemplateSelection() {
               id="restaurantName"
               value={settings.restaurantName}
               onChange={(e) => updateSettings({ restaurantName: e.target.value })}
-              placeholder="Rumah Makan Saya"
+              placeholder="D'Sai Kitchen"
             />
           </div>
           <div className="space-y-2">
@@ -179,7 +180,7 @@ export function TemplateSelection() {
               id="restaurantNameEn"
               value={settings.restaurantNameEn || ''}
               onChange={(e) => updateSettings({ restaurantNameEn: e.target.value })}
-              placeholder="My Restaurant"
+              placeholder="D'Sai Kitchen"
             />
           </div>
           <div className="space-y-2">
@@ -238,7 +239,18 @@ export function TemplateSelection() {
               key={theme.name}
               onClick={() =>
                 updateSettings({
-                  templateColor: theme as any,
+                  templateColor: {
+                    name: theme.name,
+                    bgGradient: theme.bgGradient,
+                    bgClass: theme.bgClass,
+                    cardBg: theme.cardBg,
+                    cardBorder: theme.cardBorder,
+                    headerBg: theme.headerBg,
+                    textPrimary: theme.textPrimary,
+                    accentColor: theme.accentColor,
+                    buttonBg: theme.buttonBg,
+                    buttonHover: theme.buttonHover,
+                  },
                 })
               }
               className="text-left"

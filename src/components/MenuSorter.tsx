@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -70,12 +70,16 @@ function SortableMenuCard({ item, isDragging = false }: { item: MenuItem; isDrag
         <GripVertical className="size-5" />
       </button>
 
-      {/* 🖼️ GAMBAR: Diperkecil (size-10 = 40px) */}
-      <div className="size-10 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200 flex items-center justify-center">
+      {/* 🖼️ GAMBAR: Fixed size seperti di MenuBuilder (w-16 h-16 = 64px) */}
+      <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200 flex items-center justify-center">
         {item.image ? (
-          <ImageWithFallback src={item.image} alt={item.name} className="size-full object-cover" />
+          <ImageWithFallback 
+            src={item.image} 
+            alt={item.name} 
+            className="w-full h-full object-cover" 
+          />
         ) : (
-          <ImageIcon className="text-gray-300 size-5" />
+          <ImageIcon className="text-gray-300 size-6" />
         )}
       </div>
 
@@ -109,9 +113,15 @@ function DragOverlayItem({ item }: { item: MenuItem }) {
   return (
     <div className="bg-white rounded-lg border-2 border-orange-500 shadow-xl p-3 flex items-center gap-3 opacity-95 cursor-grabbing">
       <GripVertical className="size-5 text-gray-400" />
-      {/* Gambar Kecil */}
-      <div className="size-10 rounded-md overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
-        {item.image ? <img src={item.image} className="size-full object-cover" /> : null}
+      {/* Gambar Kecil - Fixed size */}
+      <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+        {item.image ? (
+          <img 
+            src={item.image} 
+            alt={item.name}
+            className="w-full h-full object-cover" 
+          />
+        ) : null}
       </div>
       <div>
         {/* Teks Besar */}

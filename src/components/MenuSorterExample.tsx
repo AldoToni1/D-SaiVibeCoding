@@ -9,9 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MenuSorter } from './MenuSorter';
-import { useMenu } from '../contexts/MenuContext';
-import type { MenuItem as MenuSorterItem } from './MenuSorter';
-import type { MenuItem as ContextMenuItem } from '../contexts/MenuContext';
+import { useMenu, type MenuItem } from '../contexts/MenuContext';
 
 /**
  * Contoh 1: MenuSorter Standalone (dengan dummy data)
@@ -33,36 +31,23 @@ export function MenuSorterStandalone() {
  */
 export function MenuSorterWithContext() {
   const { menuItems, reorderMenuItems } = useMenu();
-  const [items, setItems] = useState<MenuSorterItem[]>([]);
+  const [items, setItems] = useState<MenuItem[]>([]);
 
   // Convert MenuContext items ke format MenuSorter
   useEffect(() => {
     const converted = menuItems.map((item, index) => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      category: item.category,
-      image: item.image,
+      ...item,
       order: item.order ?? index,
     }));
     setItems(converted);
   }, [menuItems]);
 
   // Handler untuk sync dengan MenuContext
-  const handleOrderChange = async (newItems: MenuSorterItem[]) => {
+  const handleOrderChange = async (newItems: MenuItem[]) => {
     setItems(newItems);
     
-    // Convert kembali ke format MenuContext
-    const contextItems: ContextMenuItem[] = newItems.map((item) => {
-      const original = menuItems.find((m) => m.id === item.id);
-      return {
-        ...original!,
-        order: item.order,
-      };
-    });
-
     // Update via MenuContext
-    await reorderMenuItems(contextItems);
+    await reorderMenuItems(newItems);
   };
 
   // Note: Untuk implementasi lengkap, perlu modifikasi MenuSorter
@@ -83,7 +68,7 @@ export function MenuSorterWithContext() {
  * 
  * Contoh bagaimana membuat custom save function
  */
-export async function customSaveOrder(items: MenuSorterItem[]): Promise<void> {
+export async function customSaveOrder(items: MenuItem[]): Promise<void> {
   try {
     // Contoh: Save ke Supabase
     const response = await fetch('/api/menu/reorder', {
@@ -116,7 +101,7 @@ export async function customSaveOrder(items: MenuSorterItem[]): Promise<void> {
  * 
  * Contoh bagaimana load data dari API external
  */
-export async function loadMenuFromAPI(): Promise<MenuSorterItem[]> {
+export async function loadMenuFromAPI(): Promise<MenuItem[]> {
   try {
     const response = await fetch('https://api-anda.com/menus');
     const data = await response.json();

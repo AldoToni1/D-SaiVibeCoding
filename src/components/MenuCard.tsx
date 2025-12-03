@@ -1,8 +1,9 @@
 import React from 'react';
-import { ShoppingCart, ImageIcon, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, ImageIcon, Plus, Minus, Loader2 } from 'lucide-react';
 import { useCart } from '../contexts/cartcontext';
 import { useMenu } from '../contexts/MenuContext';
 import type { MenuItem } from '../contexts/MenuContext';
+import { useAutoTranslate } from '../hooks/useAutoTranslate';
 
 interface MenuCardProps {
   item: MenuItem;
@@ -21,10 +22,19 @@ export function MenuCard({ item, language = 'id', themeColor }: MenuCardProps) {
   const { addToCart, getQuantity, decrementQuantity, incrementQuantity } = useCart();
   const { trackView } = useMenu();
 
-  const displayName = language === 'id' ? item.name : item.nameEn || item.name;
-  const displayDescription = language === 'id' ? item.description : item.descriptionEn || item.description;
+  // Auto-translate jika language = 'en' dan tidak ada nameEn/descriptionEn
+  const {
+    displayText: displayName,
+    isTranslating: isTranslatingName,
+  } = useAutoTranslate(item.name, item.nameEn, language, `menu_${item.id}_name`);
+  
+  const {
+    displayText: displayDescription,
+    isTranslating: isTranslatingDescription,
+  } = useAutoTranslate(item.description, item.descriptionEn, language, `menu_${item.id}_description`);
 
   const currentQuantity = getQuantity(item.id);
+  const isTranslating = isTranslatingName || isTranslatingDescription;
 
   // Default theme colors jika tidak diberikan
   const colors = themeColor || {
@@ -75,11 +85,13 @@ export function MenuCard({ item, language = 'id', themeColor }: MenuCardProps) {
 
   return (
     <div
-      className={`${colors.cardBg} rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200 border ${colors.cardBorder} flex flex-col h-full overflow-hidden max-w-[350px] w-full mx-auto`}
+      className={`${colors.cardBg} rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border ${colors.cardBorder} flex flex-col h-full overflow-hidden w-full`}
+      style={{ maxWidth: '360px' }}
     >
-      {/* Image Section */}
+      {/* Image Section - Height 210-240px */}
       <div
-        className="aspect-video overflow-hidden bg-gray-100 flex-shrink-0 w-full relative rounded-t-xl cursor-pointer"
+        className="overflow-hidden bg-gray-100 flex-shrink-0 w-full relative rounded-t-lg cursor-pointer"
+        style={{ height: '225px' }}
         onClick={handleImageClick}
       >
         {item.image ? (
@@ -93,32 +105,42 @@ export function MenuCard({ item, language = 'id', themeColor }: MenuCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">
-            <ImageIcon className="w-16 h-16 text-gray-400" />
+            <ImageIcon className="w-12 h-12 text-gray-400" />
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-3 flex flex-col flex-grow justify-between min-h-[180px]">
-        <div className="flex-grow flex flex-col">
+      {/* Content - Padding lebih besar untuk teks tidak mepet */}
+      <div className="px-6 py-5 flex flex-col flex-grow">
+        {/* Title */}
+        <div className="flex items-start gap-2 mb-2">
           <h3
-            className={`${colors.textPrimary} font-bold text-lg mb-2 leading-tight line-clamp-2`}
-            style={{ minHeight: '3rem' }}
+            className={`${colors.textPrimary} font-bold text-lg mb-2 leading-tight line-clamp-2 flex-1`}
           >
             {displayName || 'Menu Item'}
           </h3>
-
-          <p className={`text-gray-600 text-sm leading-relaxed line-clamp-2 mb-3`} style={{ minHeight: '2.5rem' }}>
-            {displayDescription || 'No description'}
-          </p>
-
-          <div className="mb-3">
-            <span className={`${colors.accentColor} font-bold text-xl`}>{formatPrice(item.price)}</span>
-          </div>
+          {isTranslatingName && (
+            <Loader2 className="size-4 text-gray-400 animate-spin mt-1 flex-shrink-0" />
+          )}
         </div>
 
-        {/* Bottom Section */}
-        <div className="mt-auto pt-2">
+        {/* Description - Max 4-5 lines, spacing 6-8px dari judul */}
+        <div className="flex items-start gap-2 mb-3">
+          <p className={`text-gray-600 text-sm leading-relaxed line-clamp-4 flex-1`}>
+            {displayDescription || 'No description'}
+          </p>
+          {isTranslatingDescription && (
+            <Loader2 className="size-4 text-gray-400 animate-spin mt-1 flex-shrink-0" />
+          )}
+        </div>
+
+        {/* Price - Spacing 10-12px dari deskripsi */}
+        <div className="mb-[18px]">
+          <span className={`${colors.accentColor} font-bold text-xl`}>{formatPrice(item.price)}</span>
+        </div>
+
+        {/* Bottom Section - Push ke bawah dengan mt-auto, spacing ±18px dari harga */}
+        <div className="mt-auto">
           {currentQuantity > 0 ? (
             <div
               className={`flex items-center justify-center gap-3 rounded-lg py-2.5 px-4 border`}
@@ -163,7 +185,7 @@ export function MenuCard({ item, language = 'id', themeColor }: MenuCardProps) {
               type="button"
             >
               <ShoppingCart size={20} className="flex-shrink-0" />
-              <span>Tambah ke Keranjang</span>
+              <span>{language === 'id' ? 'Tambah ke Keranjang' : 'Add to Cart'}</span>
             </button>
           )}
         </div>

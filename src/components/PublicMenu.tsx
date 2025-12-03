@@ -5,8 +5,51 @@ import { useCart } from '../contexts/cartcontext';
 import { LanguageToggle } from './LanguageToggle';
 import { CategoryChip } from './CategoryChip';
 import { MenuCard } from './MenuCard';
-import { Moon, Sun, Instagram, Facebook, MapPin, Clock, ArrowLeft, ShoppingCart, X } from 'lucide-react';
+import { Moon, Sun, Instagram, Facebook, MapPin, Clock, ArrowLeft, ShoppingCart, X, Grid3x3, Utensils, Coffee } from 'lucide-react';
 import Checkout from './CheckoutPage';
+import { useAutoTranslate } from '../hooks/useAutoTranslate';
+
+// Icon mapping untuk kategori
+const categoryIcons: Record<string, typeof Grid3x3> = {
+  all: Grid3x3,
+  food: Utensils,
+  drinks: Coffee,
+  makanan: Utensils,
+  minuman: Coffee,
+};
+
+// Component untuk CategoryChip dengan auto-translate
+function CategoryChipWithTranslate({
+  category,
+  categoryLabels,
+  language,
+  isSelected,
+  onClick,
+}: {
+  category: string;
+  categoryLabels: Record<string, { id: string; en: string }>;
+  language: 'id' | 'en';
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  // Get label dari mapping jika ada
+  let label: string;
+  if (category === 'all') {
+    label = categoryLabels.all[language];
+  } else if (categoryLabels[category]?.[language]) {
+    label = categoryLabels[category][language];
+  } else {
+    // Jika tidak ada di mapping, gunakan auto-translate
+    const { displayText } = useAutoTranslate(category, undefined, language, `category_${category}`);
+    label = displayText;
+  }
+
+  // Get icon untuk kategori
+  const categoryKey = category.toLowerCase();
+  const Icon = categoryIcons[categoryKey] || categoryIcons[category] || Grid3x3;
+
+  return <CategoryChip label={label} isSelected={isSelected} onClick={onClick} icon={Icon} />;
+}
 
 export function PublicMenu({ onBack }: { onBack?: () => void }) {
   const { menuItems, settings } = useMenu();
@@ -31,8 +74,15 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
 
   const sortedItems = [...filteredItems].sort((a, b) => a.order - b.order);
 
-  const restaurantName =
-    language === 'id' ? settings.restaurantName : settings.restaurantNameEn || settings.restaurantName;
+  // Auto-translate restaurant name jika language = 'en' dan tidak ada restaurantNameEn
+  const {
+    displayText: restaurantName,
+  } = useAutoTranslate(
+    settings.restaurantName,
+    settings.restaurantNameEn,
+    language,
+    'restaurant_name'
+  );
 
   // Get theme colors dari settings
   const themeColor = settings.templateColor || {
@@ -98,22 +148,20 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
       </header>
 
       {/* Category Tabs */}
-      <section className={`${themeColor.cardBg} border-b ${themeColor.cardBorder} sticky top-[65px] z-40`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-center gap-4 overflow-x-auto scrollbar-hide flex-nowrap sm:flex-wrap">
-            {categories.map((category) => {
-              const label =
-                category === 'all' ? categoryLabels.all[language] : categoryLabels[category]?.[language] || category;
-              return (
-                <CategoryChip
-                  key={category}
-                  label={label}
-                  isSelected={selectedCategory === category}
-                  onClick={() => setSelectedCategory(category)}
-                />
-              );
-            })}
-          </div>
+      <section className={`${themeColor.cardBg} border-b ${themeColor.cardBorder} sticky top-[65px] z-40 shadow-sm`}>
+        <div className="container mx-auto px-4">
+          <nav className="flex items-center justify-center gap-1 overflow-x-auto scrollbar-hide py-2 w-full">
+            {categories.map((category) => (
+              <CategoryChipWithTranslate
+                key={category}
+                category={category}
+                categoryLabels={categoryLabels}
+                language={language}
+                isSelected={selectedCategory === category}
+                onClick={() => setSelectedCategory(category)}
+              />
+            ))}
+          </nav>
         </div>
       </section>
 
@@ -124,7 +172,7 @@ export function PublicMenu({ onBack }: { onBack?: () => void }) {
             <p className={`${themeColor.accentColor}`}>{t('Belum ada menu tersedia', 'No menu items available')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-stretch justify-items-center">
             {sortedItems.map((item) => (
               <MenuCard key={item.id} item={item} language={language} themeColor={themeColor} />
             ))}
